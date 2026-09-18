@@ -129,7 +129,7 @@ async function extractPdfText(file) {
     throw error;
   }
 
-  // const parser = new PDFParse({ data: file.buffer });
+  const parser = new PDFParse({ data: file.buffer });
   try {
     const result = await parser.getText();
     return ensureText(result.text, "Readable PDF text");
