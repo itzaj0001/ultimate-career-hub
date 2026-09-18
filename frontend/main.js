@@ -124,7 +124,7 @@ function sendMessage() {
 
   scrollToBottom();
 
-  fetch("http://localhost:5000/api/chat", {
+  fetch(`${API_BASE_URL}/api/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -324,7 +324,6 @@ function scrollToTop() {
 }
 
 
-// const API_BASE_URL = "http://localhost:5000";
 const API_BASE_URL = "https://ultimate-career-hub-ngne.vercel.app";
 
 function escapeHtml(value = "") {
