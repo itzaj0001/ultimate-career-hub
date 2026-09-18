@@ -363,7 +363,11 @@ app.post("/api/chat", async (req, res) => {
       });
 
       try {
-        const reply = await callGeminiForText(contents, systemInstruction);
+        const reply = await callGeminiForText(
+  contents,
+  systemInstruction,
+  () => "Tell me about yourself."
+);
         session.history.push({ role: "user", parts: [{ text: userMessage }] });
         session.history.push({ role: "model", parts: [{ text: reply }] });
         return res.json({ success: true, reply, mode: "interview" });
@@ -403,7 +407,11 @@ app.post("/api/chat", async (req, res) => {
       });
 
       try {
-        const reply = await callGeminiForText(contents, systemInstruction);
+        const reply = await callGeminiForText(
+  contents,
+  systemInstruction,
+  () => "Thanks for your answer. Let's continue with the next question: What are your strengths as a software developer?"
+);
         session.interview.questionNumber += 1;
         session.interview.currentQuestion = reply; // The reply contains the next question
         session.history.push({ role: "user", parts: [{ text: userMessage }] });
