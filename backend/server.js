@@ -455,7 +455,12 @@ app.post("/api/chat", async (req, res) => {
   });
 
   try {
-    const reply = await callGeminiForText(contents, systemInstruction);
+    // const reply = await callGeminiForText(contents, systemInstruction);
+    const reply = await callGeminiForText(
+  contents,
+  systemInstruction,
+  () => "Gemini is temporarily busy. Please try your question again in a moment."
+);
     session.history.push({ role: "user", parts: [{ text: userMessage }] });
     session.history.push({ role: "model", parts: [{ text: reply }] });
     res.json({ success: true, reply, mode: "chat" });
