@@ -324,7 +324,8 @@ function scrollToTop() {
 }
 
 
-const API_BASE_URL = "http://localhost:5000";
+// const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://ultimate-career-hub-ngne.vercel.app";
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, (char) => ({
