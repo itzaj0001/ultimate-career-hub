@@ -159,7 +159,7 @@ async function extractPdfText(file) {
  * @param {string} systemInstruction - System instruction for the model.
  * @returns {Promise<string>} - The text response from Gemini.
  */
-async function callGeminiForText(contents, systemInstruction) {
+async function callGeminiForText(contents, systemInstruction,fallback = null) {
   if (!hasApiKey) {
     const error = new Error("AI generation is unavailable because GEMINI_API_KEY is not configured.");
     error.status = 503;
@@ -187,6 +187,10 @@ async function callGeminiForText(contents, systemInstruction) {
     return content.trim();
   } catch (error) {
     const status = error?.status || error?.code || "UNKNOWN";
+    if (fallback && (status === 503 || status === "503")) {
+  console.log("[Gemini] Using fallback after 503");
+  return fallback();
+}
     console.error(`[Gemini] Request failed: ${status} ${error.message}`);
     throw error;
   }
@@ -288,7 +292,40 @@ function buildSkillGapResult(resumeText, jobDescription) {
     prioritySkills: missingSkills.slice(0, 5),
   };
 }
+function buildFallbackJobDescription(role) {
+  return `Job Title: ${role}
 
+Job Summary:
+We are seeking a motivated professional for the ${role} position. The role involves applying relevant technical and professional skills to solve problems, complete projects, and contribute effectively to the organization.
+
+Responsibilities:
+- Perform tasks and responsibilities related to the ${role} position.
+- Work on projects and solve technical or business problems.
+- Collaborate with team members and communicate progress clearly.
+- Follow established development, quality, and documentation practices.
+- Continuously improve skills and stay updated with relevant technologies.
+
+Required Qualifications:
+- Bachelor's degree or equivalent qualification in a relevant field.
+- Strong problem-solving and analytical abilities.
+- Good communication and teamwork skills.
+- Understanding of concepts relevant to the ${role} role.
+
+Required Technical/Professional Skills:
+- Role-specific technical knowledge.
+- Problem solving and analytical thinking.
+- Communication and collaboration.
+- Ability to learn and work with new tools and technologies.
+
+Preferred Skills:
+- Practical project experience.
+- Internship or professional experience in a related area.
+- Familiarity with modern tools, frameworks, and development practices.
+
+Experience Requirements:
+- Fresh graduates and candidates with relevant internship or project experience may apply.
+- Professional experience may be preferred depending on the organization and seniority of the role.`;
+}
 // ---------------------------------------------------------------------------
 // Chat endpoint — Chat Mode and Interview Mode
 // ---------------------------------------------------------------------------
@@ -514,9 +551,11 @@ app.post("/api/job-description", async (req, res, next) => {
           }],
         },
       ],
-      "You generate professional, realistic job descriptions. Return plain text only."
-    );
-
+    //   "You generate professional, realistic job descriptions. Return plain text only."
+    // );
+"You generate professional, realistic job descriptions. Return plain text only.",
+() => buildFallbackJobDescription(role)
+);
     res.json({ role, description, source: "ai" });
   } catch (error) {
     next(error);
