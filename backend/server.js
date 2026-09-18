@@ -5,7 +5,7 @@ const multer = require("multer");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const { GoogleGenAI } = require("@google/genai");
-const { PDFParse } = require("pdf-parse");
+// const { PDFParse } = require("pdf-parse");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -122,6 +122,25 @@ function ensureText(value, label, maxLength = 30000) {
   return value.trim().slice(0, maxLength);
 }
 
+// async function extractPdfText(file) {
+//   if (!file?.buffer) {
+//     const error = new Error("Resume PDF is required.");
+//     error.status = 400;
+//     throw error;
+//   }
+
+//   // const parser = new PDFParse({ data: file.buffer });
+//   try {
+//     const result = await parser.getText();
+//     return ensureText(result.text, "Readable PDF text");
+//   } finally {
+//     await parser.destroy();
+//   }
+// }
+
+// ---------------------------------------------------------------------------
+// Gemini request helpers
+// ---------------------------------------------------------------------------
 async function extractPdfText(file) {
   if (!file?.buffer) {
     const error = new Error("Resume PDF is required.");
@@ -129,19 +148,11 @@ async function extractPdfText(file) {
     throw error;
   }
 
-  const parser = new PDFParse({ data: file.buffer });
-  try {
-    const result = await parser.getText();
-    return ensureText(result.text, "Readable PDF text");
-  } finally {
-    await parser.destroy();
-  }
+  return ensureText(
+    file.buffer.toString("utf8"),
+    "Readable PDF text"
+  );
 }
-
-// ---------------------------------------------------------------------------
-// Gemini request helpers
-// ---------------------------------------------------------------------------
-
 /**
  * Calls Gemini for a text response.
  * @param {Array} contents - Gemini contents array (alternating user/model roles).
