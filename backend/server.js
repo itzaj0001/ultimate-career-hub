@@ -5,7 +5,7 @@ const multer = require("multer");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const { GoogleGenAI } = require("@google/genai");
-// const { PDFParse } = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
