@@ -214,54 +214,90 @@
       updatePasswordStrength();
     });
 
-    document.getElementById("loginForm").addEventListener("submit", e => {
-      e.preventDefault();
+  document.getElementById("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
 
-      const email = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value;
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const matched = users.find(user => user.email === email && user.password === password);
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
 
-      if (!matched) {
-        alert("Invalid email or password.");
-        return;
-      }
-
-      localStorage.removeItem("loggedInUser");
-      sessionStorage.setItem("loggedInUser", JSON.stringify(matched));
-      alert(`Welcome back, ${matched.name}! Redirecting...`);
-      window.location.href = "index.html";
+  try {
+    const response = await fetch("http://localhost:5000/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email,
+        password
+      })
     });
 
-    document.getElementById("signupForm").addEventListener("submit", e => {
-      e.preventDefault();
+    const data = await response.json();
 
-      const name = document.getElementById("signupName").value.trim();
-      const email = document.getElementById("signupEmail").value.trim();
-      const password = document.getElementById("signupPassword").value;
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const strength = updatePasswordStrength();
+    if (!response.ok) {
+      alert(data.message || "Invalid email or password.");
+      return;
+    }
 
-      if (strength.label !== "Strong") {
-        alert("Please create a strong password with uppercase, lowercase, number, special character, and at least 8 characters.");
-        signupPassword.focus();
-        return;
-      }
+    sessionStorage.setItem("loggedInUser", JSON.stringify(data.user));
 
-      if (users.find(user => user.email === email)) {
-        alert("User already exists with this email!");
-        return;
-      }
+    alert(`Welcome back, ${data.user.name}! Redirecting...`);
 
-      const newUser = { name, email, password, bio: "", picture: "" };
-      users.push(newUser);
-      localStorage.setItem("users", JSON.stringify(users));
-      alert("Account created! Please login with your new account.");
-      document.getElementById("signupForm").reset();
-      showAuthPanel("login");
-      history.replaceState(null, "", "#login");
-      updatePasswordStrength();
+    window.location.href = "index.html";
+
+  } catch (error) {
+    console.error("Login error:", error);
+    alert("Cannot connect to the server. Please make sure the backend is running.");
+  }
+}); 
+
+   document.getElementById("signupForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const name = document.getElementById("signupName").value.trim();
+  const email = document.getElementById("signupEmail").value.trim();
+  const password = document.getElementById("signupPassword").value;
+
+  const strength = updatePasswordStrength();
+
+  if (strength.label !== "Strong") {
+    alert("Please create a strong password with uppercase, lowercase, number, special character, and at least 8 characters.");
+    signupPassword.focus();
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:5000/api/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name,
+        email,
+        password
+      })
     });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Signup failed.");
+      return;
+    }
+
+    alert("Account created! Please login with your new account.");
+
+    document.getElementById("signupForm").reset();
+    showAuthPanel("login");
+    history.replaceState(null, "", "#login");
+    updatePasswordStrength();
+
+  } catch (error) {
+    console.error("Signup error:", error);
+    alert("Cannot connect to the server. Please make sure the backend is running.");
+  }
+});
   </script>
   <script src="auth.js"></script>
   <script src="main.js"></script>

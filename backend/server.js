@@ -1,3 +1,13 @@
+require("dotenv").config();
+
+const mongoose = require("mongoose");
+const User = require("./models/User");
+const bcrypt = require("bcryptjs");
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected successfully"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
@@ -5,14 +15,109 @@ const multer = require("multer");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const { GoogleGenAI } = require("@google/genai");
-// const { PDFParse } = require("pdf-parse");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
+app.post("/api/register", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
 
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        message: "Name, email and password are required."
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existingUser = await User.findOne({
+      email: normalizedEmail
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        message: "User already exists with this email."
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: hashedPassword
+    });
+
+    res.status(201).json({
+      message: "Account created successfully.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({
+      message: "Server error while creating account."
+    });
+  }
+});
+
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required."
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({
+      email: normalizedEmail
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password."
+      });
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        message: "Invalid email or password."
+      });
+    }
+
+    res.json({
+      message: "Login successful.",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        bio: user.bio,
+        picture: user.picture
+      }
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+
+    res.status(500).json({
+      message: "Server error while logging in."
+    });
+  }
+});
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
