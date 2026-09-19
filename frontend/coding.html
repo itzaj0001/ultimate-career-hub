@@ -148,26 +148,47 @@
     });
 
     async function runCodeWithPiston(language, code) {
-  const response = await fetch('https://emkc.org/api/v2/piston/execute', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      language: language,
-      version: "*",
-      files: [{ content: code }]
-    })
-  });
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/execute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ language, code }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          return `Error: ${data.error || `Code execution failed (HTTP ${response.status}).`}`;
+        }
+        return data.output;
+      } catch (error) {
+        console.error("Code execution failed:", error);
+        return `Error: ${error.message || "Could not run code. Please try again."}`;
+      }
+    }
 
-  const data = await response.json();
-  return data.run.output;
-}
+    function runWebPreview(language, code) {
+      const terminal = document.getElementById("terminalOutput");
+      let preview = document.getElementById("webPreview");
+      if (!preview) {
+        preview = document.createElement("iframe");
+        preview.id = "webPreview";
+        preview.title = "HTML/CSS preview";
+        preview.sandbox = "";
+        preview.style.cssText = "width:100%; min-height:240px; margin-top:12px; border:1px solid #334155; border-radius:6px; background:#fff;";
+        document.querySelector(".terminal-container").appendChild(preview);
+      }
+      preview.srcdoc = language === "html"
+        ? code
+        : `<style>${code}</style><main><h1>CSS Preview</h1><p>Edit the CSS to style this preview.</p><button>Sample button</button></main>`;
+      preview.hidden = false;
+      terminal.innerText = "Rendered browser preview below.";
+    }
 
 
 
     window.runCode = async function () {
       const langMap = {
         javascript: 'javascript',
-        python: 'python3',
+        python: 'python',
         cpp: 'cpp',
         c: 'c',
         java: 'java',
@@ -179,6 +200,15 @@
       const pistonLang = langMap[selectedLang] || 'javascript';
       const code = editorInstance.getValue();
 
+      if (selectedLang === "html" || selectedLang === "css") {
+        runWebPreview(selectedLang, code);
+        return;
+      }
+
+      const preview = document.getElementById("webPreview");
+      if (preview) preview.hidden = true;
+
+      document.getElementById("terminalOutput").innerText = "Running code...";
       const output = await runCodeWithPiston(pistonLang, code);
 
       document.getElementById("terminalOutput").innerText = output || "✅ Code ran successfully. No output.";

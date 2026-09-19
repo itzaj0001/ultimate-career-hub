@@ -19,7 +19,17 @@ const { GoogleGenAI } = require("@google/genai");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+const corsOrigins = (process.env.CORS_ORIGINS || "https://ultimate-career-hub.vercel.app")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+app.use(cors({
+  origin(origin, callback) {
+    // Requests without an Origin header include server-to-server health checks.
+    if (!origin || corsOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Origin is not allowed by CORS."));
+  },
+}));
 app.use(express.json({ limit: "2mb" }));
 app.post("/api/register", async (req, res) => {
   try {
@@ -713,6 +723,76 @@ app.post("/api/code-review", async (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------------
+// Sandboxed code execution endpoint
+// ---------------------------------------------------------------------------
+// The execution provider is called from the server so a provider token is
+// never exposed to browser users. CODE_EXECUTION_URL must be Piston-compatible.
+const EXECUTABLE_LANGUAGES = {
+  javascript: "javascript",
+  python: "python",
+  cpp: "c++",
+  c: "c",
+  java: "java",
+};
+const CODE_EXECUTION_URL = process.env.CODE_EXECUTION_URL || "https://emkc.org/api/v2/piston/execute";
+
+app.post("/api/execute", async (req, res, next) => {
+  try {
+    const requestedLanguage = typeof req.body.language === "string" ? req.body.language.trim() : "";
+    const language = EXECUTABLE_LANGUAGES[requestedLanguage];
+    const code = ensureText(req.body.code, "Code", 15000);
+
+    if (requestedLanguage === "html" || requestedLanguage === "css") {
+      return res.status(400).json({ error: "HTML and CSS do not produce terminal output. Use a browser preview for these languages." });
+    }
+    if (!language) {
+      return res.status(400).json({ error: "Choose JavaScript, Python, C++, C, or Java to run code." });
+    }
+    if (!process.env.CODE_EXECUTION_API_KEY && CODE_EXECUTION_URL.includes("emkc.org")) {
+      return res.status(503).json({
+        error: "Code execution is not configured. Set CODE_EXECUTION_URL to your Piston-compatible service and, if required, CODE_EXECUTION_API_KEY in Vercel.",
+      });
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    let executionResponse;
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (process.env.CODE_EXECUTION_API_KEY) headers.Authorization = `Bearer ${process.env.CODE_EXECUTION_API_KEY}`;
+      executionResponse = await fetch(CODE_EXECUTION_URL, {
+        method: "POST",
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          language,
+          version: "*",
+          files: [{ content: code }],
+          compile_timeout: 10000,
+          run_timeout: 3000,
+        }),
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    const result = await executionResponse.json().catch(() => ({}));
+    if (!executionResponse.ok) {
+      const providerMessage = result.message || result.error || "The code execution service rejected the request.";
+      return res.status(502).json({ error: `Code execution service error: ${providerMessage}` });
+    }
+
+    const output = [result.compile?.output, result.run?.output].filter(Boolean).join("");
+    res.json({ output, exitCode: result.run?.code ?? result.compile?.code ?? null });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      return res.status(504).json({ error: "Code execution timed out. Please simplify the program and try again." });
+    }
+    next(error);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Error handler
 // ---------------------------------------------------------------------------
 app.use((err, req, res, next) => {
@@ -729,4 +809,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+}
+
+module.exports = app;

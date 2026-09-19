@@ -324,7 +324,10 @@ function scrollToTop() {
 }
 
 
-const API_BASE_URL = "https://ultimate-career-hub-ngne.vercel.app";
+// Set window.CAREER_HUB_API_BASE_URL before main.js when the API is deployed
+// somewhere other than the default production API. This never falls back to
+// localhost in production.
+const API_BASE_URL = (window.CAREER_HUB_API_BASE_URL || "https://ultimate-career-hub-ngne.vercel.app").replace(/\/$/, "");
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
