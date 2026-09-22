@@ -39,25 +39,9 @@ function buildNavbar(user) {
   const nav = document.querySelector("nav");
   if (!nav) return;
 
-  const guestLinks = `
-    <div class="guest-nav-spacer" aria-hidden="true"></div>
-    <div class="guest-nav-actions">
-      <a href="contact.html" class="nav-contact-link">Contact Us</a>
-      <a href="login.html" class="nav-auth-link">Login / Sign Up</a>
-    </div>
-  `;
-
-  const userLinks = `
-    <ul class="nav-list auth-nav">
-      <li><a href="index.html"${getNavLinkClass("index.html")}>Home</a></li>
-      <li><a href="roadmap.html"${getNavLinkClass("roadmap.html")}>Career Roadmap</a></li>
-      <li><a href="jobs.html"${getNavLinkClass("jobs.html")}>Internships & Jobs</a></li>
-      <li><a href="interview.html"${getNavLinkClass("interview.html")}>Interview Prep</a></li>
-      <li><a href="resume.html"${getNavLinkClass("resume.html")}>Resume Tips</a></li>
-      <li><a href="chatbot.html"${getNavLinkClass("chatbot.html")}>Mock Interview Bot</a></li>
-      <li><a href="coding.html"${getNavLinkClass("coding.html")}>Practice Coding</a></li>
-      <li><a href="contact.html"${getNavLinkClass("contact.html")}>Contact Us</a></li>
-    </ul>
+  const links = [["index.html","Home","fa-house"],["roadmap.html","Roadmaps","fa-map"],["jobs.html","Jobs","fa-briefcase"],["interview.html","Interview","fa-brain"],["resume.html","Resume","fa-file-lines"],["chatbot.html","Mock AI","fa-robot"],["dashboard.html","Dashboard","fa-chart-pie"]];
+  const linkMarkup = links.map(([page,label,icon]) => `<a href="${page}"${getNavLinkClass(page)}><i class="fas ${icon}"></i>${label}</a>`).join("");
+  const account = user ? `
     <div class="profile-menu">
       <button class="profile-toggle" id="profileToggle" type="button" aria-expanded="false" aria-label="Open profile menu">
         <span class="profile-avatar">${buildAvatar(user)}</span>
@@ -75,11 +59,19 @@ function buildNavbar(user) {
         <button type="button" id="editProfileBtn"><i class="fas fa-user-pen"></i> Edit Profile</button>
         <button type="button" id="logoutBtn"><i class="fas fa-right-from-bracket"></i> Logout</button>
       </div>
-    </div>
-  `;
+    </div>` : `<div class="guest-nav-actions"><a href="login.html" class="nav-login-link">Login</a><a href="login.html#signup" class="nav-auth-link">Sign Up</a></div>`;
 
   nav.className = user ? "site-nav logged-in" : "site-nav logged-out";
-  nav.innerHTML = user ? userLinks : guestLinks;
+  nav.innerHTML = `<a class="nav-brand" href="index.html"><i class="fas fa-rocket"></i> Ultimate <b>Career Hub</b></a><button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false"><i class="fas fa-bars"></i></button><div class="nav-menu"><div class="nav-links">${linkMarkup}</div>${account}</div>`;
+  nav.querySelector(".nav-toggle")?.addEventListener("click", (event) => { const menu = nav.querySelector(".nav-menu"); const open = menu.classList.toggle("is-open"); event.currentTarget.setAttribute("aria-expanded", String(open)); });
+}
+
+function buildSidebar() {
+  if (["login.html", "signup.html", "contact.html"].includes(currentPage) || document.querySelector(".app-sidebar")) return;
+  const items = [["index.html","Home","fa-house"],["roadmap.html","Roadmaps","fa-map"],["jobs.html","Jobs","fa-briefcase"],["jobs.html","Internships","fa-graduation-cap"],["interview.html","Interview","fa-brain"],["resume.html","Resume","fa-file-lines"],["chatbot.html","Mock AI","fa-robot"],["dashboard.html","Dashboard","fa-chart-pie"]];
+  const sidebar = document.createElement("aside"); sidebar.className = "app-sidebar"; sidebar.setAttribute("aria-label", "Career Hub navigation");
+  sidebar.innerHTML = `<nav>${items.map(([page,label,icon]) => `<a href="${page}"${getNavLinkClass(page)}><i class="fas ${icon}"></i><span>${label}</span></a>`).join("")}</nav><div class="sidebar-motivation"><i class="fas fa-rocket"></i><p>Big dreams need a plan.<br><strong>You got this!</strong></p></div>`;
+  document.body.classList.add("has-sidebar"); document.body.appendChild(sidebar);
 }
 
 function bindProfileMenu() {
@@ -248,7 +240,9 @@ if (!publicPages.includes(currentPage) && !user) {
 
 function initializeAuthNavbar() {
   const activeUser = getLoggedInUser();
+  document.body.classList.add(`page-${(currentPage || "index.html").replace(".html", "")}`);
   buildNavbar(activeUser);
+  buildSidebar();
   bindProfileMenu();
   updateGuestHomeCard(activeUser);
 }
