@@ -39,25 +39,17 @@ function buildNavbar(user) {
   const nav = document.querySelector("nav");
   if (!nav) return;
 
-  const guestLinks = `
-    <div class="guest-nav-spacer" aria-hidden="true"></div>
-    <div class="guest-nav-actions">
-      <a href="contact.html" class="nav-contact-link">Contact Us</a>
-      <a href="login.html" class="nav-auth-link">Login / Sign Up</a>
-    </div>
-  `;
+  const links = `
+    <a href="index.html"${getNavLinkClass("index.html")}>Home</a>
+    <a href="roadmap.html"${getNavLinkClass("roadmap.html")}>Roadmaps</a>
+    <a href="jobs.html"${getNavLinkClass("jobs.html")}>Opportunities</a>
+    <a href="interview.html"${getNavLinkClass("interview.html")}>Interview Prep</a>
+    <a href="resume.html"${getNavLinkClass("resume.html")}>Resume Tools</a>
+    <a href="chatbot.html"${getNavLinkClass("chatbot.html")}>Mock Interview</a>
+    <a href="coding.html"${getNavLinkClass("coding.html")}>Coding</a>
+    <a href="contact.html"${getNavLinkClass("contact.html")}>Contact</a>`;
 
-  const userLinks = `
-    <ul class="nav-list auth-nav">
-      <li><a href="index.html"${getNavLinkClass("index.html")}>Home</a></li>
-      <li><a href="roadmap.html"${getNavLinkClass("roadmap.html")}>Career Roadmap</a></li>
-      <li><a href="jobs.html"${getNavLinkClass("jobs.html")}>Internships & Jobs</a></li>
-      <li><a href="interview.html"${getNavLinkClass("interview.html")}>Interview Prep</a></li>
-      <li><a href="resume.html"${getNavLinkClass("resume.html")}>Resume Tips</a></li>
-      <li><a href="chatbot.html"${getNavLinkClass("chatbot.html")}>Mock Interview Bot</a></li>
-      <li><a href="coding.html"${getNavLinkClass("coding.html")}>Practice Coding</a></li>
-      <li><a href="contact.html"${getNavLinkClass("contact.html")}>Contact Us</a></li>
-    </ul>
+  const accountControl = user ? `
     <div class="profile-menu">
       <button class="profile-toggle" id="profileToggle" type="button" aria-expanded="false" aria-label="Open profile menu">
         <span class="profile-avatar">${buildAvatar(user)}</span>
@@ -75,11 +67,29 @@ function buildNavbar(user) {
         <button type="button" id="editProfileBtn"><i class="fas fa-user-pen"></i> Edit Profile</button>
         <button type="button" id="logoutBtn"><i class="fas fa-right-from-bracket"></i> Logout</button>
       </div>
-    </div>
-  `;
+    </div>` : `
+    <div class="guest-nav-actions">
+      <a href="login.html" class="nav-login-link">Login</a>
+      <a href="login.html#signup" class="nav-auth-link">Sign Up</a>
+    </div>`;
 
   nav.className = user ? "site-nav logged-in" : "site-nav logged-out";
-  nav.innerHTML = user ? userLinks : guestLinks;
+  nav.innerHTML = `
+    <a href="index.html" class="nav-brand" aria-label="Ultimate Career Hub home"><span class="brand-mark"><i class="fas fa-compass"></i></span><span>Ultimate <b>Career Hub</b></span></a>
+    <button class="nav-toggle" type="button" aria-controls="primaryNavigation" aria-expanded="false" aria-label="Open navigation"><i class="fas fa-bars"></i></button>
+    <div class="nav-menu" id="primaryNavigation">
+      <div class="nav-links">${links}</div>
+      ${accountControl}
+    </div>`;
+}
+
+function bindNavigation() {
+  const toggle = document.querySelector(".nav-toggle");
+  const menu = document.querySelector(".nav-menu");
+  toggle?.addEventListener("click", () => {
+    const isOpen = menu.classList.toggle("is-open");
+    toggle.setAttribute("aria-expanded", String(isOpen));
+  });
 }
 
 function bindProfileMenu() {
@@ -228,6 +238,7 @@ function saveProfile(event) {
   localStorage.setItem("users", JSON.stringify(updatedUsers));
   closeProfileModal();
   buildNavbar(updatedUser);
+  bindNavigation();
   bindProfileMenu();
   alert("Profile updated successfully!");
 }
@@ -248,7 +259,9 @@ if (!publicPages.includes(currentPage) && !user) {
 
 function initializeAuthNavbar() {
   const activeUser = getLoggedInUser();
+  document.body.classList.add(`page-${(currentPage || "index.html").replace(".html", "")}`);
   buildNavbar(activeUser);
+  bindNavigation();
   bindProfileMenu();
   updateGuestHomeCard(activeUser);
 }
