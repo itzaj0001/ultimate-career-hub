@@ -24,7 +24,7 @@
         <p>Find jobs and internships based on your skills and interests.</p>
 
         <!-- Job filtering form + job cards will be pasted here -->
-        <form id="job-filter-form" class="job-search-form" onsubmit="filterJobs(); return false;">
+        <form id="job-filter-form" class="job-search-form">
           <div class="oneline">
             <input type="text" id="skillInput" placeholder="🔍 Skill (e.g. Python, Design)" />
             <input type="text" id="locationInput" placeholder="📍 Location (e.g. Remote, Delhi)" />
@@ -43,6 +43,7 @@
 
 
         <div class="enhanced-roadmap">
+          <p id="opportunityCount" class="opportunity-count" role="status" aria-live="polite"></p>
           <h3>🔥 Available Opportunities</h3>
           <div class="horizontal-roadmap" id="jobResults">
             <div class="step-card" data-tooltip="Remote Role" data-type="internship" data-location="remote"

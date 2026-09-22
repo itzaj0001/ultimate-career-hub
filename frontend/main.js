@@ -23,64 +23,74 @@ function saveJob(button) {
 }
 
 function clearFilters() {
-  document.getElementById("skillInput").value = "";
-  document.getElementById("locationInput").value = "";
-  document.getElementById("typeSelect").value = "";
+  const skillInput = document.getElementById("skillInput");
+  const locationInput = document.getElementById("locationInput");
+  const typeSelect = document.getElementById("typeSelect");
 
-  document.querySelectorAll(".step-card").forEach((card) => {
-    card.style.display = "block";
-  });
+  if (!skillInput || !locationInput || !typeSelect) return;
 
-  const notice = document.getElementById("noResultsMessage");
-  if (notice) notice.style.display = "none";
+  skillInput.value = "";
+  locationInput.value = "";
+  typeSelect.value = "";
+  filterJobs();
 }
 
 function showAllJobs() {
-  document.querySelectorAll(".step-card").forEach((job) => {
-    job.style.display = "block";
-  });
+  clearFilters();
+}
 
-  document.getElementById("skillInput").value = "";
-  document.getElementById("locationInput").value = "";
-  document.getElementById("typeSelect").value = "";
+function normalizeOpportunityType(value) {
+  const normalizedValue = String(value || "").trim().toLowerCase();
 
-  const notice = document.getElementById("noResultsMessage");
-  if (notice) notice.style.display = "none";
+  if (normalizedValue.includes("intern")) return "internship";
+  if (normalizedValue.includes("job")) return "job";
+
+  return normalizedValue;
+}
+
+function updateOpportunityCount(count, type, hasAdditionalFilters) {
+  const countElement = document.getElementById("opportunityCount");
+  if (!countElement) return;
+
+  const label = type === "job" ? "job" : type === "internship" ? "internship" : "opportunity";
+  const pluralLabel = count === 1 ? label : label === "opportunity" ? "opportunities" : `${label}s`;
+  const suffix = hasAdditionalFilters ? " matching your filters" : "";
+
+  countElement.textContent = `Showing ${count} ${pluralLabel}${suffix}`;
 }
 
 function filterJobs() {
-  const skill = document
-    .getElementById("skillInput")
-    .value.trim()
-    .toLowerCase();
-  const location = document
-    .getElementById("locationInput")
-    .value.trim()
-    .toLowerCase();
-  const type = document.getElementById("typeSelect").value.trim().toLowerCase();
+  const skillInput = document.getElementById("skillInput");
+  const locationInput = document.getElementById("locationInput");
+  const typeSelect = document.getElementById("typeSelect");
+  const jobResults = document.getElementById("jobResults");
 
-  const jobs = document.querySelectorAll(".step-card");
-  let matchFound = false;
+  if (!skillInput || !locationInput || !typeSelect || !jobResults) return;
+
+  const skill = skillInput.value.trim().toLowerCase();
+  const location = locationInput.value.trim().toLowerCase();
+  const type = normalizeOpportunityType(typeSelect.value);
+  const jobs = jobResults.querySelectorAll(".step-card");
+  let matchCount = 0;
 
   jobs.forEach((job) => {
-    const jobSkill = job.dataset.skills || "";
-    const jobLocation = job.dataset.location || "";
-    const jobType = job.dataset.type || "";
+    const jobSkill = (job.dataset.skills || "").toLowerCase();
+    const jobLocation = (job.dataset.location || "").toLowerCase();
+    const jobType = normalizeOpportunityType(job.dataset.type);
 
     const matchesSkill = !skill || jobSkill.includes(skill);
     const matchesLocation = !location || jobLocation.includes(location);
     const matchesType = !type || jobType === type;
+    const matches = matchesSkill && matchesLocation && matchesType;
 
-    if (matchesSkill && matchesLocation && matchesType) {
-      job.style.display = "block";
-      matchFound = true;
-    } else {
-      job.style.display = "none";
-    }
+    job.hidden = !matches;
+    if (matches) matchCount += 1;
   });
 
   const notice = document.getElementById("noResultsMessage");
-  notice.style.display = matchFound ? "none" : "block";
+  if (notice) notice.style.display = matchCount ? "none" : "block";
+
+  updateOpportunityCount(matchCount, type, Boolean(skill || location));
 }
 
 // === Chatbot Logic ===
@@ -225,6 +235,13 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       filterJobs();
     });
+
+  ["skillInput", "locationInput"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("input", filterJobs);
+  });
+  document.getElementById("typeSelect")?.addEventListener("change", filterJobs);
+
+  filterJobs();
 });
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -670,7 +687,7 @@ const interviewPracticeState = {
     aptitude: 0,
     coding: 0,
   },
-  showAnswer: true,
+  showAnswer: false,
 };
 
 function renderCategoryQuestions(tabId, category) {
@@ -690,7 +707,7 @@ function renderCategoryQuestions(tabId, category) {
   const progress = ((safeIndex + 1) / categoryQuestions.length) * 100;
   const answerHtml = interviewPracticeState.showAnswer
     ? `<div class="practice-answer">${formatPracticeAnswer(q)}</div>`
-    : `<div class="practice-answer practice-answer-hidden">Answer hidden. Use Show Answer when you are ready.</div>`;
+    : "";
 
   container.innerHTML = `
     <article class="practice-panel">
@@ -744,7 +761,7 @@ function showTab(tabName) {
   if (CATEGORY_TABS[tabName]) {
     interviewPracticeState.activeTab = tabName;
     interviewPracticeState.indexByTab[tabName] = 0;
-    interviewPracticeState.showAnswer = true;
+    interviewPracticeState.showAnswer = false;
     renderCategoryQuestions(tabName, CATEGORY_TABS[tabName]);
   }
 }
@@ -756,13 +773,13 @@ function goToPracticeQuestion(tabId, direction) {
     Math.min((interviewPracticeState.indexByTab[tabId] || 0) + direction, categoryQuestions.length - 1)
   );
   interviewPracticeState.indexByTab[tabId] = nextIndex;
-  interviewPracticeState.showAnswer = true;
+  interviewPracticeState.showAnswer = false;
   renderCategoryQuestions(tabId, CATEGORY_TABS[tabId]);
 }
 
 function jumpToPracticeQuestion(tabId, index) {
   interviewPracticeState.indexByTab[tabId] = index;
-  interviewPracticeState.showAnswer = true;
+  interviewPracticeState.showAnswer = false;
   renderCategoryQuestions(tabId, CATEGORY_TABS[tabId]);
 }
 
@@ -830,13 +847,31 @@ function displayQuestions(filtered = questions) {
       : "question-card";
     card.innerHTML = `
               <strong>Q${index + 1}: ${q.question}</strong>
-              <p class="answer">${q.answer}</p>
+              <p class="answer" hidden>${q.answer}</p>
+              <button type="button" class="answer-toggle" aria-expanded="false">Show Answer</button>
               <p><small>${q.category} • ${q.company} • ${
       q.difficulty
     }</small></p>
             `;
+    const answer = card.querySelector(".answer");
+    const answerToggle = card.querySelector(".answer-toggle");
+
+    const setAnswerVisibility = (showAnswer) => {
+      answer.hidden = !showAnswer;
+      answerToggle.textContent = showAnswer ? "Hide Answer" : "Show Answer";
+      answerToggle.setAttribute("aria-expanded", String(showAnswer));
+      card.classList.toggle("flipped", showAnswer);
+    };
+
+    answerToggle.addEventListener("click", () => {
+      setAnswerVisibility(answer.hidden);
+    });
+
     if (flashcardMode) {
-      card.onclick = () => card.classList.toggle("flipped");
+      card.onclick = (event) => {
+        if (event.target.closest("button")) return;
+        setAnswerVisibility(answer.hidden);
+      };
     }
     container.appendChild(card);
   });
